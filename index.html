@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8">
+  <title>WebHost Simulator - Prototype</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      background: #050816;
+      color: #f4f4f4;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .game {
+      background: #0b1020;
+      border-radius: 16px;
+      padding: 20px;
+      width: 900px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.6);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 10px;
+      letter-spacing: 1px;
+    }
+
+    .subtitle {
+      text-align: center;
+      font-size: 14px;
+      color: #aaa;
+      margin-bottom: 20px;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .card {
+      background: #111827;
+      border-radius: 12px;
+      padding: 14px 16px;
+      flex: 1;
+      min-width: 240px;
+    }
+
+    .card h2 {
+      font-size: 16px;
+      margin-bottom: 8px;
+      color: #e5e7eb;
+    }
+
+    .stat {
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+
+    .stat span {
+      font-weight: bold;
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 8px 14px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+      background: #2563eb;
+      color: white;
+      transition: transform 0.1s ease, box-shadow 0.1s ease, opacity 0.1s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(37,99,235,0.4);
+    }
+
+    button:active {
+      transform: translateY(0);
+      box-shadow: none;
+      opacity: 0.9;
+    }
+
+    button:disabled {
+      background: #4b5563;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+      opacity: 0.7;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 2fr 1.5fr;
+      gap: 16px;
+    }
+
+    .servers, .log {
+      background: #111827;
+      border-radius: 12px;
+      padding: 14px 16px;
+      min-height: 200px;
+      max-height: 350px;
+      overflow-y: auto;
+    }
+
+    .servers h2, .log h2 {
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+
+    .server-item {
+      background: #020617;
+      border-radius: 10px;
+      padding: 8px 10px;
+      margin-bottom: 6px;
+      font-size: 13px;
+      border: 1px solid #1f2933;
+    }
+
+    .log-entry {
+      font-size: 12px;
+      margin-bottom: 4px;
+      color: #d1d5db;
+    }
+
+    .log-entry span {
+      color: #9ca3af;
+      font-size: 11px;
+    }
+
+    .warning {
+      color: #fbbf24;
+      font-size: 13px;
+      margin-top: 6px;
+      min-height: 16px;
+    }
+
+    .danger {
+      color: #f87171;
+    }
+
+    .green {
+      color: #4ade80;
+    }
+
+    .footer {
+      margin-top: 10px;
+      font-size: 12px;
+      text-align: right;
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+  <div class="game">
+    <h1>WebHost Simulator (Prototype)</h1>
+    <div class="subtitle">
+      Започваш с малък гаражен хостинг. Купувай сървъри, взимай клиенти и не фалирай. 💸
+    </div>
+
+    <div class="top-bar">
+      <div class="card">
+        <h2>Финанси</h2>
+        <div class="stat">Баланс: <span id="money">0</span> лв</div>
+        <div class="stat">Доход на тик: <span id="incomePerTick">0</span> лв</div>
+        <div class="stat">Тик интервал: <span id="tickTime">3</span> секунди</div>
+        <div class="controls">
+          <button id="btnBuyServer">Купи сървър (500 лв)</button>
+          <button id="btnAddClient">Добави клиент (изисква свободен слот)</button>
+        </div>
+        <div id="warning" class="warning"></div>
+      </div>
+
+      <div class="card">
+        <h2>Инфо</h2>
+        <div class="stat">Брой сървъри: <span id="serverCount">0</span></div>
+        <div class="stat">Общ капацитет: <span id="totalCapacity">0</span> клиенти</div>
+        <div class="stat">Общо клиенти: <span id="totalClients">0</span></div>
+        <div class="stat">Свободни слотове: <span id="freeSlots">0</span></div>
+      </div>
+    </div>
+
+    <div class="layout">
+      <div class="servers">
+        <h2>Сървъри</h2>
+        <div id="serversList"></div>
+      </div>
+      <div class="log">
+        <h2>Лог</h2>
+        <div id="logList"></div>
+      </div>
+    </div>
+
+    <div class="footer">
+      Ако фалитнеш (баланс &lt; 0), просто рефрешни страницата за нова игра.
+    </div>
+  </div>
+
+  <script>
+    // --- ИГРОВА ЛОГИКА ---
+
+    const state = {
+      money: 1500,                  // стартов баланс
+      servers: [],                  // {id, capacity, used}
+      clients: 0,                   // общ брой клиенти
+      incomePerClientPerTick: 40,  // доход на клиент на тик
+      tickMs: 3000,                 // 3 секунди
+      nextServerId: 1
+    };
+
+    const elements = {
+      money: document.getElementById('money'),
+      incomePerTick: document.getElementById('incomePerTick'),
+      tickTime: document.getElementById('tickTime'),
+      serverCount: document.getElementById('serverCount'),
+      totalCapacity: document.getElementById('totalCapacity'),
+      totalClients: document.getElementById('totalClients'),
+      freeSlots: document.getElementById('freeSlots'),
+      serversList: document.getElementById('serversList'),
+      logList: document.getElementById('logList'),
+      warning: document.getElementById('warning'),
+      btnBuyServer: document.getElementById('btnBuyServer'),
+      btnAddClient: document.getElementById('btnAddClient'),
+    };
+
+    function log(message, type = 'normal') {
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      if (type === 'danger') entry.classList.add('danger');
+      if (type === 'success') entry.classList.add('green');
+      const time = new Date().toLocaleTimeString();
+      entry.innerHTML = `<span>[${time}]</span> ${message}`;
+      elements.logList.prepend(entry);
+    }
+
+    function updateUI() {
+      const totalCapacity = state.servers.reduce((sum, s) => sum + s.capacity, 0);
+      const used = state.servers.reduce((sum, s) => sum + s.used, 0);
+      const freeSlots = totalCapacity - used;
+      const incomePerTick = state.clients * state.incomePerClientPerTick;
+
+      elements.money.textContent = state.money.toFixed(0);
+      elements.incomePerTick.textContent = incomePerTick.toFixed(0);
+      elements.tickTime.textContent = (state.tickMs / 1000).toFixed(0);
+
+      elements.serverCount.textContent = state.servers.length;
+      elements.totalCapacity.textContent = totalCapacity;
+      elements.totalClients.textContent = state.clients;
+      elements.freeSlots.textContent = freeSlots;
+
+      // обновяване списък със сървъри
+      elements.serversList.innerHTML = '';
+      state.servers.forEach(server => {
+        const div = document.createElement('div');
+        div.className = 'server-item';
+        div.innerHTML = `
+          <div><b>Сървър #${server.id}</b></div>
+          <div>Капацитет: ${server.used} / ${server.capacity} клиенти</div>
+        `;
+        elements.serversList.appendChild(div);
+      });
+
+      // ако парите са минус - game over (но не режем бутоните, да можеш да се бъзикаш)
+      if (state.money < 0) {
+        elements.warning.textContent = '⚠ ФАЛИТ! Балансът ти е под 0. Рефрешни страницата за нова игра.';
+        elements.warning.classList.add('danger');
+      }
+    }
+
+    function getFreeSlots() {
+      const totalCapacity = state.servers.reduce((sum, s) => sum + s.capacity, 0);
+      const used = state.servers.reduce((sum, s) => sum + s.used, 0);
+      return totalCapacity - used;
+    }
+
+    // Купуване на сървър
+    function buyServer() {
+      const price = 500;
+      if (state.money < price) {
+        elements.warning.textContent = 'Нямаш достатъчно пари за нов сървър (500 лв).';
+        elements.warning.classList.remove('danger');
+        return;
+      }
+
+      state.money -= price;
+
+      // Можеш да направиш различни капацитети по-късно
+      const capacity = 5 + Math.floor(Math.random() * 6); // 5–10 клиенти
+      state.servers.push({
+        id: state.nextServerId++,
+        capacity,
+        used: 0
+      });
+
+      elements.warning.textContent = '';
+      log(`Купи сървър с капацитет ${capacity} клиенти за ${price} лв.`, 'success');
+      updateUI();
+    }
+
+    // Добавяне на клиент
+    function addClient() {
+      const freeSlots = getFreeSlots();
+      if (freeSlots <= 0) {
+        elements.warning.textContent = 'Нямаш свободни слотове. Купи нов сървър.';
+        elements.warning.classList.remove('danger');
+        log('Опита да добавиш клиент, но няма свободни слотове.', 'danger');
+        return;
+      }
+
+      // слагаме клиента на първия сървър с свободно място
+      for (const server of state.servers) {
+        if (server.used < server.capacity) {
+          server.used += 1;
+          break;
+        }
+      }
+
+      state.clients += 1;
+      elements.warning.textContent = '';
+      log('Нов клиент активира хостинг план. Доходът ти на тик се увеличи.', 'success');
+      updateUI();
+    }
+
+    // Тик система - автоматичен доход
+    function gameTick() {
+      const incomePerTick = state.clients * state.incomePerClientPerTick;
+      if (incomePerTick !== 0) {
+        state.money += incomePerTick;
+        log(`Получи ${incomePerTick.toFixed(0)} лв от клиентите си.`, 'normal');
+      } else {
+        // не спамим лог, ако нямаш клиенти
+      }
+
+      updateUI();
+    }
+
+    // Закачаме бутоните
+    elements.btnBuyServer.addEventListener('click', buyServer);
+    elements.btnAddClient.addEventListener('click', addClient);
+
+    // Старт
+    function initGame() {
+      log('Добре дошъл в WebHost Simulator Prototype. Започваш с 1500 лв и 0 сървъра.');
+      updateUI();
+      setInterval(gameTick, state.tickMs);
+    }
+
+    initGame();
+  </script>
+</body>
+</html>
